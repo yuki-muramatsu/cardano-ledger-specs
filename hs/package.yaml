@@ -25,6 +25,7 @@ library:
   - tasty
   - tasty-hunit
   - hedgehog
+  - small-steps
   - tasty-hedgehog
   - tasty-hedgehog-coverage
   - text

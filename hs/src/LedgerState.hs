@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-|
 Module      : LedgerState
@@ -45,6 +46,8 @@ import           UTxO
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
+
+import Control.State.Transition
 
 -- | A ledger consists of a list of entries where each such entry is either a
 -- stake delegation step or a transaction.
@@ -359,3 +362,34 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith mappend delegatedOutpu
       return (pool, c)
     outs = getOutputs . getUtxo $ ls
     delegatedOutputs = mapMaybe (addStake (getDelegations ds)) outs
+
+----------------------------------------------------------------------------------------
+-- State transition system
+----------------------------------------------------------------------------------------
+
+data UTXOW
+
+instance STS UTXOW where
+  type State UTXOW = LedgerState
+  type Signal UTXOW = LedgerEntry
+  type Environment UTXOW = Slot
+  data PredicateFailure UTXOW = UTXOFailure [ValidationError]
+    deriving (Eq, Show)
+
+  rules = [applyLedgerEntry]
+
+fromValidity :: Validity -> PredicateResult UTXOW
+fromValidity Valid = Passed
+fromValidity (Invalid xs) = Failed $ UTXOFailure xs
+
+applyLedgerEntry :: Rule UTXOW
+applyLedgerEntry = Rule
+  [ Predicate $ \(_, lstate, lentry) -> case lentry of
+      TransactionData tx -> fromValidity $ valid tx lstate
+      DelegationData cert -> fromValidity $ validDelegation cert lstate
+
+  ]
+  ( Extension . Transition $ \(slot, lstate, lentry) -> case lentry of
+      TransactionData tx -> applyTx lstate (body tx)
+      DelegationData cert ->  applyDCert slot cert lstate
+  )

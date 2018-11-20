@@ -40,6 +40,16 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - tasty-hedgehog-coverage-0.1.0.0
+  # - git: https://github.com/input-output-hk/cardano-chain
+  #   commit: e4e1c5e3570a38f82a290e19d768c5ed3cc67ff1
+  #   subdirs:
+  #     - specs/semantics/hs
+  - /home/nc/topos/iohk/cardano-chain/specs/semantics/hs
+  - capability-0.1.0.0
+  - moo-1.2
+  - typerep-map-0.3.0
+  - gray-code-0.3.1
+
 
 
 # Override default flag values for local packages and extra-deps
