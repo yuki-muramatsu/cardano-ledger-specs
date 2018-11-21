@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 {-|
@@ -53,34 +54,35 @@ import           Coin                    (Coin (..))
 import           Keys
 
 import           Delegation.Certificates (DCert (..))
+import GHC.Generics (Generic)
 
 -- |A hash
 type Hash = Digest SHA256
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Generic, Ord)
 
 -- |An address for UTxO.
 data Addr = AddrTxin HashKey HashKey
-          deriving (Show, Eq, Ord)
+          deriving (Show, Eq, Generic, Ord)
 
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
-data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord)
+data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord, Generic)
 
 -- |The output of a UTxO.
-data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord)
+data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord, Generic)
 
 -- |The unspent transaction outputs.
-newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord)
+newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord, Generic)
 
 -- |A raw transaction
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
              , certs   :: !(Set DCert)
-             } deriving (Show, Eq, Ord)
+             } deriving (Show, Eq, Generic, Ord)
 
 -- |Compute the id of a transaction.
 txid :: Tx -> TxId
@@ -98,7 +100,7 @@ txouts tx = UTxO $
     transId = txid tx
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Ord)
+data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Generic, Ord)
 
 -- |A fully formed transaction.
 --
@@ -106,7 +108,7 @@ data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Ord)
 data TxWits = TxWits
               { body       :: !Tx
               , witnessSet :: !(Set Wit)
-              } deriving (Show, Eq, Ord)
+              } deriving (Show, Eq, Generic, Ord)
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit

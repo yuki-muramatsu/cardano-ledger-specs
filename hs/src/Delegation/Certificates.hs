@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric      #-}
 module Delegation.Certificates
   (
     DCert(..)
@@ -6,7 +7,7 @@ module Delegation.Certificates
 
 import           Keys
 import           Slot (Epoch(..))
-
+import GHC.Generics (Generic)
 import           Delegation.StakePool
 
 -- | A heavyweight certificate.
@@ -20,7 +21,7 @@ data DCert = -- | A stake key registration certificate.
           | RetirePool VKey Epoch
             -- | A stake delegation certificate.
           | Delegate Delegation
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Generic, Ord)
 
 -- |Determine if a certificate is authorized by the given key.
 authDCert :: VKey -> DCert -> Bool

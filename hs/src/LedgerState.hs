@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {-|
@@ -48,6 +49,7 @@ import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
 
 import Control.State.Transition
+import GHC.Generics (Generic)
 
 -- | A ledger consists of a list of entries where each such entry is either a
 -- stake delegation step or a transaction.
@@ -55,7 +57,7 @@ import Control.State.Transition
 data LedgerEntry =
     TransactionData !TxWits
   | DelegationData !DCert
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 type Ledger = [LedgerEntry]
 
@@ -98,7 +100,7 @@ instance Monoid Validity where
 
 -- |An account based address for a rewards
 newtype RewardAcnt = RewardAcnt HashKey
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Generic, Ord)
 
 mkRwdAcnt :: KeyPair -> RewardAcnt
 mkRwdAcnt keys = RewardAcnt $ hashKey $ vKey keys
@@ -117,7 +119,7 @@ data DelegationState =
     , getStPools     :: Map.Map HashKey (StakePool, Slot)
     -- |A map of retiring stake pools to the epoch when they retire.
     , getRetiring    :: Map.Map HashKey Epoch
-    } deriving (Show, Eq)
+    } deriving (Show, Generic, Eq)
 
 emptyDelegation :: DelegationState
 emptyDelegation =
@@ -132,7 +134,7 @@ data LedgerState =
   , getDelegationState :: !DelegationState
     -- |The current epoch.
   , getEpoch           :: Epoch
-  } deriving (Show, Eq)
+  } deriving (Show, Generic, Eq)
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId :: TxId

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Delegation.StakePool
   ( StakePool(..)
   , Delegation(..)
@@ -9,6 +10,7 @@ import           Numeric.Natural
 
 import           Coin            (Coin)
 import           Keys
+import GHC.Generics (Generic)
 
 -- |A stake pool.
 data StakePool = StakePool
@@ -17,9 +19,9 @@ data StakePool = StakePool
                    , poolCost    :: Coin
                    , poolMargin  :: Ratio Natural
                    , poolAltAcnt :: Maybe HashKey
-                   } deriving (Show, Eq, Ord)
+                   } deriving (Show, Eq, Generic, Ord)
 
 -- |The delegation of one stake key to another.
 data Delegation = Delegation { delegator :: VKey
                              , delegatee :: VKey }
-                             deriving (Show, Eq, Ord)
+                             deriving (Show, Eq, Generic, Ord)

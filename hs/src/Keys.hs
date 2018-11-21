@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Keys
   ( Owner(..)
   , SKey(..)
@@ -15,28 +16,29 @@ import           Crypto.Hash           (Digest, SHA256, hash)
 import qualified Data.ByteArray        as BA
 import qualified Data.ByteString.Char8 as BS
 import           Numeric.Natural       (Natural)
+import GHC.Generics (Generic)
 
 -- |Representation of the owner of keypair.
-newtype Owner = Owner Natural deriving (Show, Eq, Ord)
+newtype Owner = Owner Natural deriving (Show, Eq, Generic, Ord)
 
 -- |Private/Secret Key
-newtype SKey = SKey Owner deriving (Show, Eq, Ord)
+newtype SKey = SKey Owner deriving (Show, Eq, Generic, Ord)
 
 -- |Public Key
-newtype VKey = VKey Owner deriving (Show, Eq, Ord)
+newtype VKey = VKey Owner deriving (Show, Eq, Generic, Ord)
 
 -- |Key Pair
 data KeyPair = KeyPair
-  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Ord)
+  {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Generic, Ord)
 
 keyPair :: Owner -> KeyPair
 keyPair owner = KeyPair (SKey owner) (VKey owner)
 
 -- |The hash of public Key
-newtype HashKey = HashKey (Digest SHA256) deriving (Show, Eq, Ord)
+newtype HashKey = HashKey (Digest SHA256) deriving (Show, Eq, Generic, Ord)
 
 -- |A digital signature
-data Sig a = Sig a Owner deriving (Show, Eq, Ord)
+data Sig a = Sig a Owner deriving (Show, Eq, Generic, Ord)
 
 -- |Hash a given public key
 hashKey :: VKey -> HashKey

@@ -1,4 +1,7 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Generator
     (
@@ -19,6 +22,7 @@ module Generator
     , genDCertDelegate
     ) where
 
+import           Crypto.Hash           (Digest, SHA256, hash)
 import qualified Data.Map        as Map
 import qualified Data.Set        as Set
 import Data.Ratio
@@ -36,6 +40,7 @@ import           LedgerState     (LedgerEntry (..), LedgerState (..),
                                   ValidationError (..), asStateTransition,
                                   asStateTransition',
                                   genesisState, DelegationState(..)
+                                 , RewardAcnt
                                  )
 import           Slot
 import           UTxO
@@ -43,6 +48,7 @@ import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
+import Control.State.Transition.Goblin
 
 type KeyPairs = [(KeyPair, KeyPair)]
 
@@ -284,3 +290,35 @@ genDCertRegPool keys = RegPool <$> genStakePool keys
 
 genDCertDelegate :: KeyPairs -> DelegationState -> Gen DCert
 genDCertDelegate keys dstate = Delegate <$> genDelegation keys dstate
+
+----------------------------------------------------------------------------------------
+-- Goblins
+----------------------------------------------------------------------------------------
+
+instance GeneOps g => Goblin g (Digest SHA256) where
+  tinker = return -- At the moment, we don't mutate IDs
+  conjure = hash <$> Gen.bytes (Range.constant 0 64)
+
+instance GeneOps g => Goblin g Coin
+instance GeneOps g => Goblin g Owner
+instance GeneOps g => Goblin g TxId
+instance GeneOps g => Goblin g HashKey
+instance GeneOps g => Goblin g Addr
+instance GeneOps g => Goblin g TxIn
+instance GeneOps g => Goblin g TxOut
+instance GeneOps g => Goblin g Tx
+instance (GeneOps g, Goblin g a) => Goblin g (Sig a)
+instance GeneOps g => Goblin g Wit
+instance GeneOps g => Goblin g TxWits
+instance GeneOps g => Goblin g UTxO
+instance GeneOps g => Goblin g VKey
+instance GeneOps g => Goblin g StakePool
+instance GeneOps g => Goblin g Epoch
+instance GeneOps g => Goblin g Delegation
+instance GeneOps g => Goblin g DCert
+instance GeneOps g => Goblin g LedgerEntry
+
+instance GeneOps g => Goblin g RewardAcnt
+instance GeneOps g => Goblin g Slot
+instance GeneOps g => Goblin g DelegationState
+instance GeneOps g => Goblin g LedgerState

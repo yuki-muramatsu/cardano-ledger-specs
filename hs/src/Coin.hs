@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DeriveGeneric      #-}
 
 module Coin
     (
@@ -8,10 +9,11 @@ module Coin
 
 import           Data.Monoid (Sum(..))
 import           Numeric.Natural (Natural)
+import GHC.Generics (Generic)
 
 -- |The amount of value held by a transaction output.
 newtype Coin = Coin Natural
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic)
   deriving (Semigroup, Monoid) via (Sum Natural)
 
 splitCoin :: Coin -> Natural -> (Coin, Coin)
