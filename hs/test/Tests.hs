@@ -23,12 +23,14 @@ import           LedgerState             (DelegationState (..), Ledger,
                                           LedgerEntry (..), LedgerState (..),
                                           ValidationError (..),
                                           LedgerValidation(..),
+                                          PredicateFailure(..),
                                           asStateTransition, emptyDelegation,
                                           mkRwdAcnt, genesisId, genesisState)
 import           UTxO
 
 import           Delegation.Certificates (DCert (..))
 import           Delegation.StakePool    (Delegation (..), StakePool (..))
+import Control.State.Transition.Goblin.BreedingPit (breedStsGoblins)
 
 alicePay :: KeyPair
 alicePay = keyPair (Owner 1)
@@ -380,3 +382,10 @@ tests = testGroup "Ledger with Delegation" [unitTests, propertyTests]
 -- main entry point
 main :: IO ()
 main = defaultMain tests
+
+testGoblins :: IO ()
+testGoblins = breedStsGoblins jcGen (UTXOFailure [IncreasedTotalBalance])
+  where
+    jcGen = do
+      (_, steps, _, sig, ls) <- genValidStateTx
+      return (Slot steps, ls, sig)

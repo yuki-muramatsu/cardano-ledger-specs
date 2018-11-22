@@ -53,3 +53,4 @@ tests:
     - cryptonite
     - containers
     - text
+    - small-steps

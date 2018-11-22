@@ -32,6 +32,7 @@ module LedgerState
   , genesisState
   -- * Validation
   , ValidationError (..)
+  , PredicateFailure (..)
   ) where
 
 import           Crypto.Hash             (hash)
