@@ -11,6 +11,7 @@ import           Numeric.Natural
 import           Coin            (Coin)
 import           Keys
 import GHC.Generics (Generic)
+import Data.TreeDiff.Class (ToExpr(..))
 
 -- |A stake pool.
 data StakePool = StakePool
@@ -21,7 +22,11 @@ data StakePool = StakePool
                    , poolAltAcnt :: Maybe HashKey
                    } deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr StakePool
+
 -- |The delegation of one stake key to another.
 data Delegation = Delegation { delegator :: VKey
                              , delegatee :: VKey }
                              deriving (Show, Eq, Generic, Ord)
+
+instance ToExpr Delegation

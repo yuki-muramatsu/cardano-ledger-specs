@@ -17,16 +17,21 @@ import qualified Data.ByteArray        as BA
 import qualified Data.ByteString.Char8 as BS
 import           Numeric.Natural       (Natural)
 import GHC.Generics (Generic)
+import Data.TreeDiff.Class (ToExpr(..))
 
 -- |Representation of the owner of keypair.
 newtype Owner = Owner Natural deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr Owner
+
 -- |Private/Secret Key
 newtype SKey = SKey Owner deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr SKey
 -- |Public Key
 newtype VKey = VKey Owner deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr VKey
 -- |Key Pair
 data KeyPair = KeyPair
   {sKey :: SKey, vKey :: VKey} deriving (Show, Eq, Generic, Ord)
@@ -37,8 +42,13 @@ keyPair owner = KeyPair (SKey owner) (VKey owner)
 -- |The hash of public Key
 newtype HashKey = HashKey (Digest SHA256) deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr HashKey where
+  toExpr = toExpr . show
+
 -- |A digital signature
 data Sig a = Sig a Owner deriving (Show, Eq, Generic, Ord)
+
+instance ToExpr a => ToExpr (Sig a)
 
 -- |Hash a given public key
 hashKey :: VKey -> HashKey

@@ -9,6 +9,7 @@ import           Keys
 import           Slot (Epoch(..))
 import GHC.Generics (Generic)
 import           Delegation.StakePool
+import Data.TreeDiff.Class (ToExpr)
 
 -- | A heavyweight certificate.
 data DCert = -- | A stake key registration certificate.
@@ -22,6 +23,8 @@ data DCert = -- | A stake key registration certificate.
             -- | A stake delegation certificate.
           | Delegate Delegation
   deriving (Show, Eq, Generic, Ord)
+
+instance ToExpr DCert
 
 -- |Determine if a certificate is authorized by the given key.
 authDCert :: VKey -> DCert -> Bool

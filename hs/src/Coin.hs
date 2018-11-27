@@ -10,11 +10,14 @@ module Coin
 import           Data.Monoid (Sum(..))
 import           Numeric.Natural (Natural)
 import GHC.Generics (Generic)
+import Data.TreeDiff.Class (ToExpr)
 
 -- |The amount of value held by a transaction output.
 newtype Coin = Coin Natural
   deriving (Show, Eq, Ord, Generic)
   deriving (Semigroup, Monoid) via (Sum Natural)
+
+instance ToExpr Coin
 
 splitCoin :: Coin -> Natural -> (Coin, Coin)
 splitCoin (Coin n) 0 = (Coin 0, Coin n)

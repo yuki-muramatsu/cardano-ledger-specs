@@ -55,6 +55,7 @@ import           Keys
 
 import           Delegation.Certificates (DCert (..))
 import GHC.Generics (Generic)
+import Data.TreeDiff.Class (ToExpr(..))
 
 -- |A hash
 type Hash = Digest SHA256
@@ -63,26 +64,39 @@ type Hash = Digest SHA256
 newtype TxId = TxId { getTxId :: Hash }
   deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr TxId where
+  toExpr = toExpr . show
+
 -- |An address for UTxO.
 data Addr = AddrTxin HashKey HashKey
           deriving (Show, Eq, Generic, Ord)
+
+instance ToExpr Addr
 
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
 data TxIn = TxIn TxId Natural deriving (Show, Eq, Ord, Generic)
 
+instance ToExpr TxIn
+
 -- |The output of a UTxO.
 data TxOut = TxOut Addr Coin deriving (Show, Eq, Ord, Generic)
 
+instance ToExpr TxOut
+
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO (Map TxIn TxOut) deriving (Show, Eq, Ord, Generic)
+
+instance ToExpr UTxO
 
 -- |A raw transaction
 data Tx = Tx { inputs  :: !(Set TxIn)
              , outputs :: [TxOut]
              , certs   :: !(Set DCert)
              } deriving (Show, Eq, Generic, Ord)
+
+instance ToExpr Tx
 
 -- |Compute the id of a transaction.
 txid :: Tx -> TxId
@@ -102,6 +116,8 @@ txouts tx = UTxO $
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey !(Sig Tx) deriving (Show, Eq, Generic, Ord)
 
+instance ToExpr Wit
+
 -- |A fully formed transaction.
 --
 --     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
@@ -109,6 +125,8 @@ data TxWits = TxWits
               { body       :: !Tx
               , witnessSet :: !(Set Wit)
               } deriving (Show, Eq, Generic, Ord)
+
+instance ToExpr TxWits
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit

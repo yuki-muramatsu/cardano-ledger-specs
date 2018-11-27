@@ -32,7 +32,9 @@ module LedgerState
   , genesisState
   -- * Validation
   , ValidationError (..)
+  -- * STS
   , PredicateFailure (..)
+  , UTXOW
   ) where
 
 import           Crypto.Hash             (hash)
@@ -40,6 +42,7 @@ import           Data.List               (find)
 import qualified Data.Map                as Map
 import           Data.Maybe              (isJust, mapMaybe)
 import qualified Data.Set                as Set
+import Data.TreeDiff.Class (ToExpr)
 
 import           Coin                    (Coin (..))
 import           Slot                    (Slot (..), Epoch (..))
@@ -59,6 +62,8 @@ data LedgerEntry =
     TransactionData !TxWits
   | DelegationData !DCert
     deriving (Show, Eq, Generic)
+
+instance ToExpr LedgerEntry
 
 type Ledger = [LedgerEntry]
 

@@ -29,6 +29,7 @@ library:
   - tasty-hedgehog
   - tasty-hedgehog-coverage
   - text
+  - tree-diff
 
 tests:
   # delegation-test:
@@ -66,13 +67,17 @@ tests:
     - -Wincomplete-uni-patterns
     - -Wredundant-constraints
     dependencies:
+    - containers
+    - cryptonite
+    - delegation
+    - hedgehog
+    - lens
+    - pretty
+    - small-steps
     - tasty
-    - tasty-hunit
     - tasty-hedgehog
     - tasty-hedgehog-coverage
-    - hedgehog
-    - delegation
-    - cryptonite
-    - containers
+    - tasty-hunit
     - text
-    - small-steps
+    - tree-diff
+    - typerep-map
