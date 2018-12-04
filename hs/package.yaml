@@ -70,6 +70,7 @@ tests:
     - containers
     - cryptonite
     - delegation
+    - goblins
     - hedgehog
     - lens
     - pretty
@@ -79,5 +80,5 @@ tests:
     - tasty-hedgehog-coverage
     - tasty-hunit
     - text
-    - tree-diff
+    - tree-diff >= 0.0.2
     - typerep-map

@@ -49,8 +49,9 @@ extra-deps:
   - moo-1.2
   - typerep-map-0.3.0
   - gray-code-0.3.1
-
-
+  - tree-diff-0.0.2
+  - git: https://github.com/input-output-hk/goblins
+    commit: 972f80d603e5f988e16fa4b9a9645dbfc4edd654
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

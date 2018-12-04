@@ -48,7 +48,7 @@ import           Delegation.Certificates  (DCert(..))
 import           Delegation.StakePool  (StakePool(..), Delegation(..))
 
 import           Mutator
-import Control.State.Transition.Goblin
+import Test.Goblin
 
 type KeyPairs = [(KeyPair, KeyPair)]
 
