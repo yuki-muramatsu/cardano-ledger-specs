@@ -27,6 +27,7 @@ library
                      , Cardano.Spec.Chain.STS.Rule.BHead
                      , Cardano.Spec.Chain.STS.Rule.Chain
                      , Cardano.Spec.Chain.STS.Rule.Epoch
+                     , Cardano.Spec.Chain.STS.Rule.Pbft
                      , Cardano.Spec.Chain.STS.Rule.SigCnt
                      , Cardano.Spec.Consensus.Block
   --other-modules:

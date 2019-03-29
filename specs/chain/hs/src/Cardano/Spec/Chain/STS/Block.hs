@@ -86,8 +86,13 @@ hashHeader bh = hashlazy . pack $
 -- TODO: we might want to serialize this properly, without using show...
 
 -- | Computes the hash of the header.
-bhToSign :: BlockHeader -> Hash
-bhToSign = hashHeader
+--
+-- TODO(md): This is not defined in the LaTeX specification and it is
+-- not clear what type it should have. The current signature is
+-- probably wrong, but it is here just to get type-checking working
+-- w.r.t. using the verify function in a rule for PBFT.
+bhToSign :: BlockHeader -> VKey
+bhToSign = undefined
 
 -- | Compute the epoch for the given _absolute_ slot
 sEpoch :: Slot -> SlotCount -> Epoch

@@ -4,8 +4,8 @@ module Cardano.Spec.Chain.STS.Rule.SigCnt where
 
 import Control.Lens ((^.), to)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (listToMaybe)
 import Data.Map.Strict (Map)
+import Data.Maybe (listToMaybe)
 import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
 
