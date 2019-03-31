@@ -16,6 +16,7 @@ import Control.State.Transition.Examples.FileSystem.Common
 data Error
   = SomeError
   | DirectoryExists Dir State
+  | TooManyOpenFiles (Set File)
   deriving (Show)
 
 data State
@@ -37,6 +38,7 @@ mkdir st@State{dirs} d
 
 open :: State -> File -> Either Error State
 open st@State{ dirs, opened } f@(File d _) = do
+  when (0 < Set.size opened) $ Left (TooManyOpenFiles opened) -- Try commenting this out.
   when (f `Set.member` opened) $ Left SomeError
   when (d `Set.notMember` dirs) $ Left SomeError
   pure $! st { opened = Set.insert f opened }

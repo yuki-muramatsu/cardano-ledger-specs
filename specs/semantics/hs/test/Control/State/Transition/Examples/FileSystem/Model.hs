@@ -57,6 +57,8 @@ prop_SUTImplementsSTS = withTests 1000 $ property $ do
       initialState
       [fsCmdsDef stsStRef]
 
+  evalIO $ writeIORef stsStRef SUT.initSt
+
   executeSequential initialState actions
 
 data AbstractState (v :: * -> *) =
