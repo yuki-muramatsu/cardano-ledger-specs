@@ -10,14 +10,13 @@ import qualified Data.Set as Set
 
 import Control.State.Transition
 
+import Control.State.Transition.Examples.FileSystem.Common
+
 --------------------------------------------------------------------------------
 -- MKDIR transition system
 --------------------------------------------------------------------------------
 
 data MKDIR
-
-newtype Dir = Dir [String]
-  deriving (Eq, Ord, Show)
 
 instance STS MKDIR where
 
@@ -46,12 +45,6 @@ instance STS MKDIR where
 
 data OPEN
 
-data File
-  = File
-  { directory :: Dir
-  , name :: String
-  } deriving (Eq, Ord, Show)
-
 instance STS OPEN where
 
   type Environment OPEN = Set Dir
@@ -70,7 +63,7 @@ instance STS OPEN where
   transitionRules =
     [ do
         TRC (dirs, ofs, f@(File d _)) <- judgmentContext
-        d `Set.notMember` dirs ?! DirectoryDoesNotExist d
+        d `Set.member` dirs ?! DirectoryDoesNotExist d
         f `Set.notMember` ofs ?! Busy f
         pure $! Set.insert f ofs
     ]
@@ -99,7 +92,7 @@ instance STS FS where
     | OpenFailed (PredicateFailure OPEN)
     deriving (Eq, Show)
 
-  initialRules = [pure $! (Set.singleton $ Dir [], Set.empty) ]
+  initialRules = [pure $! initSt ]
 
   transitionRules =
     [ do
@@ -118,3 +111,6 @@ instance Embed MKDIR FS where
 
 instance Embed OPEN FS where
   wrapFailed = OpenFailed
+
+initSt :: State FS
+initSt = (Set.singleton $ Dir [], Set.empty)

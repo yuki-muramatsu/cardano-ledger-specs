@@ -1,8 +1,7 @@
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Control.Monad (void)
+
+import qualified Control.State.Transition.Examples.FileSystem.Model as Filesystem
+
 
 main :: IO ()
-main = defaultMain tests
- where
-  tests :: TestTree
-  tests = testGroup "Examples"
-    [ ]
+main = void $ Filesystem.tests
