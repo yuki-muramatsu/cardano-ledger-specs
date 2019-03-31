@@ -59,7 +59,6 @@ prop_SUTImplementsSTS = withTests 1000 $ property $ do
 
   executeSequential initialState actions
 
-
 data AbstractState (v :: * -> *) =
   -- NOTE: the abstract state could includes a list of predicate failures (so
   -- it is isomorphic to the return type of @applySTSIndifferently@) so that we
@@ -147,7 +146,9 @@ fsCmdsDef stsStRef = Command gen execute callbacks
       -> Var SUTResp v
       -> AbstractState v
     update (AbstractState (st, _)) (Cmd l) _ =
-      AbstractState $ applySTSIndifferently @STS.FS $ TRC ((), st, l)
+      case applySTS @STS.FS $ TRC ((), st, l) of
+        Left pfs -> AbstractState (st, pfs) -- Do not update the state on failure.
+        Right st' -> AbstractState (st', [])
 
     post
       :: AbstractState Concrete
@@ -164,10 +165,10 @@ fsCmdsDef stsStRef = Command gen execute callbacks
           -- successfully apply the concrete function.
           success
         (_:_, Right _) -> do
-          annotate "The STS failed, the SUT didn't"
+          annotate $ "The STS failed (" ++ show pfs ++ "), the SUT didn't"
           failure
-        ([], Left _) -> do
-          annotate "The STS didn't fail, the SUT did"
+        ([], Left err) -> do
+          annotate $ "The STS didn't fail, the SUT did (" ++ show err ++ ")"
           failure
         (_:_, Left _) -> do
           -- The STS and the SUT failed. We do not check the equivalence of the

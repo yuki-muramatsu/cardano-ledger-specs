@@ -13,7 +13,10 @@ import qualified Data.Set as Set
 
 import Control.State.Transition.Examples.FileSystem.Common
 
-data Error = SomeError
+data Error
+  = SomeError
+  | DirectoryExists Dir State
+  deriving (Show)
 
 data State
   = State
@@ -22,13 +25,14 @@ data State
   , opened :: Set File
   -- ^ Open files.
   }
+  deriving (Show)
 
 initSt :: State
 initSt = State (Set.singleton $ Dir []) Set.empty
 
 mkdir :: State -> Dir -> Either Error State
 mkdir st@State{dirs} d
-  | d `Set.member` dirs = Left SomeError
+  | d `Set.member` dirs = Left $ DirectoryExists d st
   | otherwise           = Right $ st { dirs = Set.insert d dirs }
 
 open :: State -> File -> Either Error State

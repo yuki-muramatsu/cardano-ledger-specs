@@ -55,7 +55,7 @@ instance STS OPEN where
 
   data PredicateFailure OPEN
     = DirectoryDoesNotExist Dir
-    | Busy File
+    | Busy File (Set Dir) (Set File)
     deriving (Eq, Show)
 
   initialRules = []
@@ -64,7 +64,7 @@ instance STS OPEN where
     [ do
         TRC (dirs, ofs, f@(File d _)) <- judgmentContext
         d `Set.member` dirs ?! DirectoryDoesNotExist d
-        f `Set.notMember` ofs ?! Busy f
+        f `Set.notMember` ofs ?! Busy f dirs ofs
         pure $! Set.insert f ofs
     ]
 
