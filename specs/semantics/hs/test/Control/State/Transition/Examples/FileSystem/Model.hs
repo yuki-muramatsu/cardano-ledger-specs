@@ -9,6 +9,7 @@
 module Control.State.Transition.Examples.FileSystem.Model where
 
 import Control.Monad.IO.Class (MonadIO)
+import Control.Monad (mzero)
 import Data.IORef (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -111,11 +112,21 @@ fsCmdsDef
 fsCmdsDef stsStRef = Command gen execute callbacks
   where
     gen :: AbstractState v -> Maybe (Gen (Cmd v))
-    gen (AbstractState ((dirs, _), _)) =
-      Just $ Cmd <$>
-        Gen.choice [ STS.MkDir <$> genDir
-                   , STS.Open <$> genFile dirs
-                   ]
+    gen (AbstractState ((dirs, _ofs, efs), _)) =
+      Just $ Cmd <$> gen'
+      where
+        gen' :: Gen STS.Cmd
+        gen' =
+          Gen.choice [ STS.MkDir <$> genDir
+                     , STS.Open <$> genFile dirs
+                     , if null efs
+                       then gen'
+                       else STS.Close <$> Gen.element (Set.toList efs)
+                     , STS.Read <$> genFile dirs
+                     , if null efs
+                       then gen'
+                       else STS.Read <$> Gen.element (Set.toList efs)
+                     ]
 
     execute :: Cmd v -> m (SUTResp)
     execute (Cmd (STS.MkDir d)) = do
@@ -125,6 +136,14 @@ fsCmdsDef stsStRef = Command gen execute callbacks
     execute (Cmd (STS.Open f)) = do
       st <- evalIO $ readIORef stsStRef
       let resp = SUT.open st f
+      updateAndReturn stsStRef resp
+    execute (Cmd (STS.Close f)) = do
+      st <- evalIO $ readIORef stsStRef
+      let resp = SUT.close st f
+      updateAndReturn stsStRef resp
+    execute (Cmd (STS.Read f)) = do
+      st <- evalIO $ readIORef stsStRef
+      let resp = SUT.read st f
       updateAndReturn stsStRef resp
 
     updateAndReturn ref resp = do

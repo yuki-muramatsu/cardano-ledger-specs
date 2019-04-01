@@ -49,7 +49,10 @@ instance STS OPEN where
 
   type Environment OPEN = Set Dir
 
-  type State OPEN = Set File
+  type State OPEN
+    = ( Set File -- Opened files
+      , Set File -- Existing files
+      )
 
   type Signal OPEN = File
 
@@ -62,9 +65,63 @@ instance STS OPEN where
 
   transitionRules =
     [ do
-        TRC (dirs, ofs, f@(File d _)) <- judgmentContext
+        TRC (dirs, (ofs, efs), f@(File d _)) <- judgmentContext
         d `Set.member` dirs ?! DirectoryDoesNotExist d
         f `Set.notMember` ofs ?! Busy f dirs ofs
+        pure $! (Set.insert f ofs, Set.insert f efs)
+    ]
+
+--------------------------------------------------------------------------------
+-- CLOSE transition system
+--------------------------------------------------------------------------------
+
+data CLOSE
+
+instance STS CLOSE where
+
+  type Environment CLOSE = ()
+
+  type State CLOSE = Set File
+
+  type Signal CLOSE = File
+
+  data PredicateFailure CLOSE = NoFailure
+    deriving (Show, Eq)
+
+  initialRules = []
+
+  transitionRules =
+    [ do
+        TRC ((), ofs, f) <- judgmentContext
+        pure $! Set.delete f ofs
+    ]
+
+--------------------------------------------------------------------------------
+-- READ transition system
+--------------------------------------------------------------------------------
+
+data READ
+
+instance STS READ where
+
+  type Environment READ = Set File -- Existing files
+
+  type State READ = Set File -- Opened files
+
+  type Signal READ = File
+
+  data PredicateFailure READ
+    = FileDoesNotExist File
+    | ReadFileBusy File
+    deriving (Eq, Show)
+
+  initialRules = []
+
+  transitionRules =
+    [ do
+        TRC (efs, ofs, f) <- judgmentContext
+        f `Set.member` efs ?! FileDoesNotExist f
+        f `Set.notMember` ofs ?! ReadFileBusy f
         pure $! Set.insert f ofs
     ]
 
@@ -77,33 +134,47 @@ data FS
 data Cmd
   = MkDir Dir
   | Open File
+  | Close File
+  | Read File
   deriving (Eq, Show)
 
 instance STS FS where
 
   type Environment FS = ()
 
-  type State FS = (Set Dir, Set File)
+  type State FS
+    = ( Set Dir  -- Existing directories
+      , Set File -- Opened files
+      , Set File -- Existing files
+      )
 
   type Signal FS = Cmd
 
   data PredicateFailure FS
     = MkDirFailed (PredicateFailure MKDIR)
     | OpenFailed (PredicateFailure OPEN)
+    | CloseFailed (PredicateFailure CLOSE)
+    | ReadFailed (PredicateFailure READ)
     deriving (Eq, Show)
 
-  initialRules = [pure $! initSt ]
+  initialRules = [ pure $! initSt ]
 
   transitionRules =
     [ do
-        TRC ((), (dirs, ofs), cmd) <- judgmentContext
+        TRC ((), (dirs, ofs, efs), cmd) <- judgmentContext
         case cmd of
           MkDir d -> do
             dirs' <- trans @MKDIR $ TRC ((), dirs, d)
-            pure $! (dirs', ofs)
+            pure $! (dirs', ofs, efs)
           Open f -> do
-            ofs' <- trans @OPEN $ TRC (dirs, ofs, f)
-            pure $! (dirs, ofs')
+            (ofs', efs') <- trans @OPEN $ TRC (dirs, (ofs, efs), f)
+            pure $! (dirs, ofs', efs')
+          Close f -> do
+            ofs' <- trans @CLOSE $ TRC ((), ofs, f)
+            pure $! (dirs, ofs', efs)
+          Read f -> do
+            ofs' <- trans @READ $ TRC (efs, ofs, f)
+            pure $! (dirs, ofs', efs)
     ]
 
 instance Embed MKDIR FS where
@@ -112,5 +183,11 @@ instance Embed MKDIR FS where
 instance Embed OPEN FS where
   wrapFailed = OpenFailed
 
+instance Embed CLOSE FS where
+  wrapFailed = CloseFailed
+
+instance Embed READ FS where
+  wrapFailed = ReadFailed
+
 initSt :: State FS
-initSt = (Set.singleton $ Dir [], Set.empty)
+initSt = (Set.singleton $ Dir [], Set.empty, Set.empty)
