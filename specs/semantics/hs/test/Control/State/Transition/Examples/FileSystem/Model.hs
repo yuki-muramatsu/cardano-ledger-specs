@@ -111,7 +111,7 @@ fsCmdsDef
   -> Command Gen m AbstractState
 fsCmdsDef stsStRef = Command gen execute callbacks
   where
-    gen :: AbstractState v -> Maybe (Gen (Cmd v))
+    gen :: AbstractState Symbolic -> Maybe (Gen (Cmd Symbolic))
     gen (AbstractState ((dirs, _ofs, efs), _)) =
       Just $ Cmd <$> gen'
       where
@@ -128,7 +128,7 @@ fsCmdsDef stsStRef = Command gen execute callbacks
                        else STS.Read <$> Gen.element (Set.toList efs)
                      ]
 
-    execute :: Cmd v -> m (SUTResp)
+    execute :: Cmd v -> m SUTResp
     execute (Cmd (STS.MkDir d)) = do
       st <- evalIO $ readIORef stsStRef
       let resp = SUT.mkdir st d
