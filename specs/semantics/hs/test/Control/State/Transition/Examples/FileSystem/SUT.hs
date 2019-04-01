@@ -65,5 +65,5 @@ read st@State { files, opened } f = do
   when (f `Set.notMember` files) $ Left $ FileDoesNotExist f
   when (f `Set.member` opened) $ Left $ Busy f
   -- Uncomment the line below for giving a counter-example of a sucessful read
-  Left SomeError
+--  Left SomeError
   pure $! st { opened = Set.insert f opened }

@@ -7,6 +7,7 @@ module Control.State.Transition.Examples.FileSystem.STS where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Hedgehog as H
 
 import Control.State.Transition
 
@@ -44,6 +45,16 @@ instance STS MKDIR where
 --------------------------------------------------------------------------------
 
 data OPEN
+
+data SFile v
+  = SFile
+  { directory :: DirRef v
+  , name :: String
+  }
+  deriving (Eq, Ord, Show)
+
+data DirRef v = Val Dir | Var (H.Var Dir v)
+  deriving (Eq, Ord, Show)
 
 instance STS OPEN where
 

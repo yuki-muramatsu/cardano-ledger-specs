@@ -81,7 +81,9 @@ test-suite examples
   main-is:             Control/State/Transition/Examples/Main.hs
   other-modules:       Control.State.Transition.Examples.FileSystem.Common
                      , Control.State.Transition.Examples.FileSystem.Model
+                     , Control.State.Transition.Examples.FileSystem.Model2
                      , Control.State.Transition.Examples.FileSystem.STS
+                     , Control.State.Transition.Examples.FileSystem.STS2
                      , Control.State.Transition.Examples.FileSystem.SUT
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
