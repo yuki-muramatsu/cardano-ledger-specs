@@ -76,7 +76,6 @@ data AbstractState (v :: * -> *) =
   -- it is isomorphic to the return type of @applySTSIndifferently@) so that we
   -- can check the abstract failures against the concrete ones.
   AbstractState (State (STS.FS (Var Dir v)), [PredicateFailure (STS.FS (Var Dir v))])
-  deriving (Show)
 
 fsCmdsDef
   :: forall m
@@ -121,7 +120,7 @@ fsCmdsDef stsStRef = Command gen execute callbacks
 
     update
       :: forall v
-       . (Ord1 v, Show1 v) => AbstractState v
+       . (Ord1 v) => AbstractState v
       -> Cmd v
       -> Var SUTResp v
       -> AbstractState v

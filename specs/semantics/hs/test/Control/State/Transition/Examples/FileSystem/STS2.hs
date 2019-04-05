@@ -21,7 +21,7 @@ data SFile dir
   { directory :: dir
   , name :: String
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
 
 --------------------------------------------------------------------------------
 -- OPEN transition system
@@ -29,7 +29,7 @@ data SFile dir
 
 data OPEN dir
 
-instance (Ord dir, Eq dir, Show dir) => STS (OPEN dir) where
+instance (Ord dir, Eq dir) => STS (OPEN dir) where
 
   type Environment (OPEN dir) = Set dir
 
@@ -41,8 +41,8 @@ instance (Ord dir, Eq dir, Show dir) => STS (OPEN dir) where
   type Signal (OPEN dir) = SFile dir
 
   data PredicateFailure (OPEN dir)
-    = DirectoryDoesNotExist dir
-    | Busy (SFile dir)
+    = DirectoryDoesNotExist
+    | Busy
     deriving (Eq, Show)
 
   initialRules = []
@@ -50,8 +50,8 @@ instance (Ord dir, Eq dir, Show dir) => STS (OPEN dir) where
   transitionRules =
     [ do
         TRC (dirs, (ofs, efs), f@(SFile d _)) <- judgmentContext
-        d `Set.member` dirs ?! DirectoryDoesNotExist d
-        f `Set.notMember` ofs ?! Busy f
+        d `Set.member` dirs ?! DirectoryDoesNotExist
+        f `Set.notMember` ofs ?! Busy
         pure $! (Set.insert f ofs, Set.insert f efs)
     ]
 
@@ -61,7 +61,7 @@ instance (Ord dir, Eq dir, Show dir) => STS (OPEN dir) where
 
 data MKDIR dir
 
-instance (Ord dir, Eq dir, Show dir) => STS (MKDIR dir) where
+instance (Ord dir, Eq dir) => STS (MKDIR dir) where
 
   type Environment (MKDIR dir) = ()
 
@@ -70,7 +70,7 @@ instance (Ord dir, Eq dir, Show dir) => STS (MKDIR dir) where
   type Signal (MKDIR dir) = dir
 
   data PredicateFailure (MKDIR dir)
-    = DirAlreadyExists dir
+    = DirAlreadyExists
     deriving (Eq, Show)
 
   initialRules = []
@@ -78,7 +78,7 @@ instance (Ord dir, Eq dir, Show dir) => STS (MKDIR dir) where
   transitionRules =
     [ do
         TRC ((), dirs, d) <- judgmentContext
-        d `Set.notMember` dirs ?! DirAlreadyExists d
+        d `Set.notMember` dirs ?! DirAlreadyExists
         pure $! Set.insert d dirs
     ]
 
@@ -92,9 +92,9 @@ data Cmd dir -- dir here would be the reference to a step in the symbolic case,
              -- or the actual directory in the concrete case.
   = MkDir dir
   | Open (SFile dir)
-  deriving (Eq, Show)
 
-instance (Ord dir, Eq dir, Show dir) => STS (FS dir) where
+
+instance (Ord dir, Eq dir) => STS (FS dir) where
 
   type Environment (FS dir) = ()
 
@@ -107,8 +107,8 @@ instance (Ord dir, Eq dir, Show dir) => STS (FS dir) where
   type Signal (FS dir) = Cmd dir
 
   data PredicateFailure (FS dir)
-    = MkDirFailed (PredicateFailure (MKDIR dir))
-    | OpenFailed (PredicateFailure (OPEN dir))
+    = MkDirFailed
+    | OpenFailed
     deriving (Eq, Show)
 
   initialRules = [ pure $! initSt ]
@@ -125,11 +125,11 @@ instance (Ord dir, Eq dir, Show dir) => STS (FS dir) where
             pure $! (dirs, ofs', efs')
     ]
 
-instance (Ord dir, Eq dir, Show dir) => Embed (MKDIR dir) (FS dir) where
-  wrapFailed = MkDirFailed
+instance (Ord dir, Eq dir) => Embed (MKDIR dir) (FS dir) where
+  wrapFailed _ = MkDirFailed
 
-instance (Ord dir, Eq dir, Show dir) => Embed (OPEN dir) (FS dir) where
-  wrapFailed = OpenFailed
+instance (Ord dir, Eq dir) => Embed (OPEN dir) (FS dir) where
+  wrapFailed _ = OpenFailed
 
 initSt :: Ord dir => State (FS dir)
 -- Now I cannot simply write Dir [], since I don't know what dir will be. So
