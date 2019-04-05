@@ -19,7 +19,7 @@ data Error
   | TooManyOpenFiles (Set File)
   | FileDoesNotExist File
   | Busy File
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 data State
   = State
@@ -30,7 +30,7 @@ data State
   , opened :: Set File
   -- ^ Open files.
   }
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 initSt :: State
 initSt

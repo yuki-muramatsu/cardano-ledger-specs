@@ -1,6 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -52,9 +53,14 @@ import qualified Control.State.Transition.Examples.FileSystem.SUT as SUT
 import qualified Control.State.Transition.Examples.FileSystem.STS2 as STS
 
 data Cmd (v :: * -> *)
-  = MkDir (Var Dir v)
-  | Open (Var Dir v) String
-  deriving (Eq, Show)
+  = AddDir Dir -- Register a directory in the abstract state, so that we can
+               -- use it later in mkdir, or even in open to be able to open
+               -- files in non-existing directories!
+--  | MkDir (Var Dir v) -- So all this nonsense needs to be a response!!!! Everything becomes un-typed
+  | MkDir (Var SUTRsp v)
+  | Open (Var SUTRsp v) String
+  deriving (Show)
+
 
 instance HTraversable Cmd where
   htraverse
@@ -62,20 +68,32 @@ instance HTraversable Cmd where
     => (forall a. g a -> f (h a))
     -> Cmd g
     -> f (Cmd h)
+  htraverse f (AddDir d) = pure $! AddDir d
   htraverse f (MkDir (Var dir)) = MkDir . Var <$> f dir
   htraverse f (Open (Var dir) n) = (`Open` n) . Var <$> f dir
 
-type SUTResp = Either SUT.Error (SUTSignal, SUT.State)
+data SUTRsp
+  = SUTError SUT.Error
+  | SUTSigSt (SUTSignal, SUT.State)
+  | AddedDir Dir
+  deriving (Eq, Ord, Show)
 
 data SUTSignal
   = SigMkDir Dir
   | SigOpen File
+  deriving (Eq, Ord, Show)
 
-data AbstractState (v :: * -> *) =
+data AbstractState (v :: * -> *)
   -- NOTE: the abstract state could includes a list of predicate failures (so
   -- it is isomorphic to the return type of @applySTSIndifferently@) so that we
   -- can check the abstract failures against the concrete ones.
-  AbstractState (State (STS.FS (Var Dir v)), [PredicateFailure (STS.FS (Var Dir v))])
+  = AbstractState
+  { abstractDirNames   :: Set (Var SUTRsp v)
+  -- ^ I had to do this contortion to be able to generate directory names, and
+  -- link them to symbolic variables when calling mkdir.
+  , stsLastSeenState   :: State (STS.FS (Var SUTRsp v))
+  , stsLastSeenFailure :: [PredicateFailure (STS.FS (Var SUTRsp v))]
+  }
 
 fsCmdsDef
   :: forall m
@@ -86,30 +104,33 @@ fsCmdsDef stsStRef = Command gen execute callbacks
   where
     gen :: AbstractState Symbolic -> Maybe (Gen (Cmd Symbolic))
     gen = undefined
+--    gen = Just $! pure MkDir Var
 
-    execute :: Cmd Concrete -> m SUTResp
+    execute :: Cmd Concrete -> m SUTRsp
+    execute (AddDir dir) = do
+      pure $! AddedDir $ dir
     execute (MkDir vDir) = do
       st <- evalIO $ readIORef stsStRef
       let
-        d = concrete vDir
-        resp = SUT.mkdir st d
-      updateAndReturn stsStRef (SigMkDir d) resp
+        AddedDir dir = concrete vDir
+        rsp = SUT.mkdir st dir
+      updateAndReturn stsStRef (SigMkDir dir) rsp
     execute (Open vDir n) = do
       st <- evalIO $ readIORef stsStRef
       let
-        d = concrete vDir
+        AddedDir d = concrete vDir
         f = File d n
-        resp = SUT.open st f
-      updateAndReturn stsStRef (SigOpen f) resp
+        rsp = SUT.open st f
+      updateAndReturn stsStRef (SigOpen f) rsp
 
-    updateAndReturn ref sig resp = do
-      case resp of
-        Left err -> pure $! Left err
+    updateAndReturn ref sig rsp = do
+      case rsp of
+        Left err -> pure $! SUTError err
         Right st' -> do
           evalIO $ writeIORef ref st'
-          pure $! Right (sig, st')
+          pure $! SUTSigSt (sig, st')
 
-    callbacks :: [Callback Cmd SUTResp AbstractState]
+    callbacks :: [Callback Cmd SUTRsp AbstractState]
     callbacks = [Require pre, Update update, Ensure post]
 
     pre
@@ -122,22 +143,17 @@ fsCmdsDef stsStRef = Command gen execute callbacks
       :: forall v
        . (Ord1 v) => AbstractState v
       -> Cmd v
-      -> Var SUTResp v
+      -> Var SUTRsp v
       -> AbstractState v
-    update (AbstractState (st, _)) (MkDir vDir) (Var symOrConcResp) =
-
-      -- What is the type we need to pass to 'applySTS'?
-      --
-      --  - STS.FS v won't work (kind mismatch)
-      --
-      --  - STS.FS (Var Dir v) won't work either (need a buch of constraints, but even this is not enough)
-
-      undefined $ applySTS @(STS.FS (Var Dir v)) $ TRC ((), st, l)
-      --   Left pfs -> undefined --AbstractState (st, pfs) -- Do not update the state on failure.
-      --   Right st' -> undefined -- AbstractState (st', [])
+    update (ast@AbstractState { abstractDirNames }) (AddDir vDir) rsp =
+      ast { abstractDirNames = Set.insert rsp abstractDirNames }
+    update (ast@AbstractState { stsLastSeenState = st }) (MkDir vDir) (Var symOrConcRsp) =
+      case applySTS @(STS.FS (Var SUTRsp v)) $ TRC ((), st, l) of
+        Left pfs -> ast { stsLastSeenFailure = pfs }  -- Do not update the state on failure.
+        Right st' -> ast { stsLastSeenState = st', stsLastSeenFailure = [] }
       where
         l = STS.MkDir vDir
-    -- update (AbstractState (st, _)) (Open (Var vDir) n) (Var symOrConcResp) =
+    -- update (AbstractState (st, _)) (Open (Var vDir) n) (Var symOrConcRsp) =
     --   undefined
     --   where
     --     l = STS.Open (File d??? n)
@@ -146,6 +162,6 @@ fsCmdsDef stsStRef = Command gen execute callbacks
       :: AbstractState Concrete
       -> AbstractState Concrete
       -> Cmd Concrete
-      -> SUTResp
+      -> SUTRsp
       -> Test ()
     post = undefined
