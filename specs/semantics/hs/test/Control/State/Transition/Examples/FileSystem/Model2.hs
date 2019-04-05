@@ -95,6 +95,12 @@ data AbstractState (v :: * -> *)
   , stsLastSeenFailure :: [PredicateFailure (STS.FS (Var SUTRsp v))]
   }
 
+allNames :: [String]
+allNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
+
+genDir :: Gen Dir
+genDir = Dir <$> Gen.list (Range.linear 1 10) (Gen.element allNames)
+
 fsCmdsDef
   :: forall m
    . (MonadTest m, MonadIO m)
@@ -103,8 +109,12 @@ fsCmdsDef
 fsCmdsDef stsStRef = Command gen execute callbacks
   where
     gen :: AbstractState Symbolic -> Maybe (Gen (Cmd Symbolic))
-    gen = undefined
---    gen = Just $! pure MkDir Var
+     -- TODO: we might need a set of available directories, so that we do not
+     -- generate this again, or make sure we are not generating an add dir twice!
+    gen AbstractState {abstractDirNames}
+      = Just $! Gen.choice [ AddDir <$> genDir
+                           , MkDir <$> (Gen.element $ Set.toList abstractDirNames)
+                           ]
 
     execute :: Cmd Concrete -> m SUTRsp
     execute (AddDir dir) = do
@@ -147,10 +157,16 @@ fsCmdsDef stsStRef = Command gen execute callbacks
       -> AbstractState v
     update (ast@AbstractState { abstractDirNames }) (AddDir vDir) rsp =
       ast { abstractDirNames = Set.insert rsp abstractDirNames }
-    update (ast@AbstractState { stsLastSeenState = st }) (MkDir vDir) (Var symOrConcRsp) =
+    update (ast@AbstractState { stsLastSeenState = st, abstractDirNames }) (MkDir vDir) (Var symOrConcRsp) =
+      -- TODO: we might need to remove vDir from the available abstractDirNames.
       case applySTS @(STS.FS (Var SUTRsp v)) $ TRC ((), st, l) of
-        Left pfs -> ast { stsLastSeenFailure = pfs }  -- Do not update the state on failure.
-        Right st' -> ast { stsLastSeenState = st', stsLastSeenFailure = [] }
+        Left pfs -> ast { stsLastSeenFailure = pfs
+                        , abstractDirNames = Set.delete vDir abstractDirNames
+                        }  -- Do not update the state on failure.
+        Right st' -> ast { stsLastSeenState = st'
+                         , stsLastSeenFailure = []
+                         , abstractDirNames = Set.delete vDir abstractDirNames
+                         }
       where
         l = STS.MkDir vDir
     -- update (AbstractState (st, _)) (Open (Var vDir) n) (Var symOrConcRsp) =
