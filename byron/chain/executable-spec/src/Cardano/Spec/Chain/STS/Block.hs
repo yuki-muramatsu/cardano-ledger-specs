@@ -93,6 +93,9 @@ hashHeader bh = hashlazy . pack $
 bhToSign :: BlockHeader -> VKey
 bhToSign = undefined
 
+bhHash :: BlockHeader -> Hash
+bhHash = undefined
+
 -- | Compute the epoch for the given _absolute_ slot
 sEpoch :: Slot -> SlotCount -> Epoch
 sEpoch (Slot s) (SlotCount spe) = Epoch $ s `div` spe
