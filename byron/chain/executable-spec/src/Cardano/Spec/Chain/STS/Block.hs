@@ -93,8 +93,13 @@ hashHeader bh = hashlazy . pack $
 bhToSign :: BlockHeader -> VKey
 bhToSign = undefined
 
+-- This is used in PBFT and CHAIN STSes
 bhHash :: BlockHeader -> Hash
 bhHash = undefined
+
+-- This is used in the CHAIN STS
+bIsEBB :: Block -> Bool
+bIsEBB = undefined
 
 -- | Compute the epoch for the given _absolute_ slot
 sEpoch :: Slot -> SlotCount -> Epoch
