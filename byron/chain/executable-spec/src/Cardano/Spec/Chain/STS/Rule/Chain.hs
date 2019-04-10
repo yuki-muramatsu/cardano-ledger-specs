@@ -7,22 +7,24 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens ((^.), _1, _5, Lens')
+import Control.Lens ((^.)) --, _1, _5, Lens')
 import qualified Crypto.Hash
+import Data.Bits (shift)
 import Data.ByteString (ByteString)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+-- import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+-- import qualified Hedgehog.Gen as Gen
+-- import qualified Hedgehog.Range as Range
+import Numeric.Natural (Natural)
 
 import Control.State.Transition
-import Control.State.Transition.Generator
+-- import Control.State.Transition.Generator
 import Ledger.Core
 -- import Ledger.Core.Generator
 import Ledger.Delegation
 import Ledger.Update
-import Ledger.UTxO (UTxO)
+import Ledger.UTxO (UTxO, TxId)
 
 import Cardano.Spec.Chain.STS.Block
 import Cardano.Spec.Chain.STS.Rule.BHead
@@ -39,7 +41,7 @@ instance STS CHAIN where
     , Map Epoch SlotCount
     , Seq VKeyGenesis
     , Hash
-    , UTxO
+    , UTxO TxId
     , UPIState
     , DIState
     )
@@ -50,6 +52,8 @@ instance STS CHAIN where
     = BHeadFailure (PredicateFailure BHEAD)
     | BBodyFailure (PredicateFailure BBODY)
     | PBFTFailure (PredicateFailure PBFT)
+    | EBBCheckFailure Bool
+    | MaximumBlockSize Natural Natural
     deriving (Eq, Show)
 
   initialRules = []
@@ -76,11 +80,23 @@ instance STS CHAIN where
 
   transitionRules = [ isEBBRule, notEBBRule ] where
     isEBBRule :: TransitionRule CHAIN
-    isEBBRule = undefined -- do
-      -- TRC (
+    isEBBRule = do
+      TRC (_, (sLast, elens, sgs, _, utxo, us, ds), b) <- judgmentContext
+      bIsEBB b ?! EBBCheckFailure False -- this is not an EBB
+      bSize b <= (2 `shift` 21) ?! MaximumBlockSize (bSize b) (2 `shift` 21)
+      let h' = bhHash (b ^. bHeader)
+      return $! (sLast, elens, sgs, h', utxo, us, ds)
 
     notEBBRule :: TransitionRule CHAIN
-    notEBBRule = undefined
+    notEBBRule = do
+      TRC (_, (sLast, elens, sgs, h, utxo, us, ds), b) <- judgmentContext
+      not (bIsEBB b) ?! EBBCheckFailure True -- this is an EBB
+      -- TODO(md): The BHEAD STS has to be rewritten first. Then after
+      -- BHEAD is transitioned, PBFT and BBODY have to be transitioned too.
+      --
+      -- (us', elens') <- trans @BHEAD $ TRC (sLast, (us, elens), b ^. bHeader)
+      return $! (sLast, elens, sgs, h, utxo, us, ds)
+
     -- [ do
     --     TRC
     --       ( (sNow, gks, _)
@@ -115,23 +131,11 @@ genesisHash :: Hash
 genesisHash = Crypto.Hash.hash ("" :: ByteString)
 
 --------------------------------------------------------------------------------
--- Chain state lenses.
---------------------------------------------------------------------------------
-
--- | Lens for the epoch contained in the chain state.
-epochL :: Lens' (State CHAIN) Epoch
-epochL = _1
-
--- | Lens for the delegation interface state contained in the chain state.
-disL :: Lens' (State CHAIN) DIState
-disL = _5
-
---------------------------------------------------------------------------------
 -- Generators
 --------------------------------------------------------------------------------
 
-instance HasTrace CHAIN where
-  initEnvGen = undefined
+-- instance HasTrace CHAIN where
+--   initEnvGen = undefined
     -- do
     -- -- In mainet the maximum header size is set to 2000000 and the maximum
     -- -- block size is also set to 2000000, so we have to make sure we cover
@@ -182,27 +186,27 @@ instance HasTrace CHAIN where
     --   Gen.integral (Range.constant 32768 2147483648)
     -- return clockSlot --, initGKeys, initPPs)
 
-  sigGen _ (e, Slot s, h, _sgs, ds, us) = do
-    -- We'd expect the slot increment to be close to 1, even for large Gen's
-    -- size numbers.
-    slotInc <- Gen.integral (Range.exponential 0 10)
-    -- Get some random issuer from the delegates of the delegation map.
-    vkI <- Gen.element $ Map.elems (ds ^. dms)
-    let dsEnv
-          = DSEnv
-          { _dSEnvAllowedDelegators = undefined
-          , _dSEnvEpoch = e
-          , _dSEnvSlot = Slot s
-          , _dSEnvStableAfter = us ^. Ledger.Update.stableAfter }
-    dCerts <- dcertsGen dsEnv
-    let bh
-          = MkBlockHeader
-          { _bhPrevHash = h
-          , _bhSlot = Slot (s + slotInc)
-          , _bhIssuer = vkI
-          , _bhSig = Sig vkI (owner vkI)
-          }
-        bb
-          = BlockBody
-          { _bDCerts = dCerts }
-    return $ Block bh bb
+  -- sigGen _ (e, Slot s, h, _sgs, ds, us) = do
+  --   -- We'd expect the slot increment to be close to 1, even for large Gen's
+  --   -- size numbers.
+  --   slotInc <- Gen.integral (Range.exponential 0 10)
+  --   -- Get some random issuer from the delegates of the delegation map.
+  --   vkI <- Gen.element $ Map.elems (ds ^. dms)
+  --   let dsEnv
+  --         = DSEnv
+  --         { _dSEnvAllowedDelegators = undefined
+  --         , _dSEnvEpoch = e
+  --         , _dSEnvSlot = Slot s
+  --         , _dSEnvStableAfter = us ^. Ledger.Update.stableAfter }
+  --   dCerts <- dcertsGen dsEnv
+  --   let bh
+  --         = MkBlockHeader
+  --         { _bhPrevHash = h
+  --         , _bhSlot = Slot (s + slotInc)
+  --         , _bhIssuer = vkI
+  --         , _bhSig = Sig vkI (owner vkI)
+  --         }
+  --       bb
+  --         = BlockBody
+  --         { _bDCerts = dCerts }
+  --   return $ Block bh bb
