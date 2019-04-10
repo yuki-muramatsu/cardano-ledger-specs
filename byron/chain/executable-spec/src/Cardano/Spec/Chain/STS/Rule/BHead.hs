@@ -4,9 +4,9 @@
 
 module Cardano.Spec.Chain.STS.Rule.BHead where
 
-import Control.Lens ((^.))
+-- import Control.Lens ((^.))
 import Data.Map.Strict (Map)
-import Data.Sequence (Seq)
+-- import Data.Sequence (Seq)
 
 import Control.State.Transition
 import Ledger.Core
@@ -19,16 +19,10 @@ import Cardano.Spec.Chain.STS.Rule.SigCnt
 data BHEAD
 
 instance STS BHEAD where
-  type Environment BHEAD
-    = ( Slot
-      , Map VKeyGenesis VKey
-      )
+  type Environment BHEAD = Slot
   type State BHEAD
-    = ( Epoch
-      , Slot
-      , Hash
-      , Seq VKeyGenesis
-      , PParams
+    = ( UPIState
+      , Map Epoch SlotCount
       )
 
   type Signal BHEAD = BlockHeader
@@ -49,29 +43,37 @@ instance STS BHEAD where
 
   transitionRules =
     [ do
-        TRC ( (sNow, dms)
-            , (eLast, sLast, hLast, sgs, us)
-            , bh ) <- judgmentContext
-        -- Check header size
-        let sMax = us ^. maxHdrSz
-        bHeaderSize bh <= sMax ?! HeaderSizeTooBig
-        -- Check that the previous hash matches
-        bh ^. bhPrevHash == hLast ?! HashesDontMatch
-        -- Check sanity of current slot
-        let sNext = bh ^. bhSlot
-        sLast < sNext ?! SlotDidNotIncrease
-        sNext <= sNow ?! SlotInTheFuture
-        -- Perform an epoch transition
-        eNext <-  trans @EPOCH $ TRC (us ^. bkSlotsPerEpoch, eLast, sNext)
-        -- Perform a signature count transition
-        sgs' <- trans @SIGCNT $ TRC ((us, dms), sgs, bh ^. bhIssuer)
-        return $! ( eNext
-                  , sNext
-                  , hashHeader bh -- the same as bhToSign bh
-                  , sgs'
-                  , us
-                  )
+        TRC (_sLast, (us, elens), _bh) <- judgmentContext
+        -- ... <- trans @EPOCH $ TRC (pps us, (elens, sEpoch sLast elens, us), bhSlot b)
+        -- let sMax =
+        -- bHeaderSize bh <= sMax ?! ...
+        return $! (us, elens)
     ]
+  -- transitionRules =
+  --   [ do
+  --       TRC ( (sNow, dms)
+  --           , (eLast, sLast, hLast, sgs, us)
+  --           , bh ) <- judgmentContext
+  --       -- Check header size
+  --       let sMax = us ^. maxHdrSz
+  --       bHeaderSize bh <= sMax ?! HeaderSizeTooBig
+  --       -- Check that the previous hash matches
+  --       bh ^. bhPrevHash == hLast ?! HashesDontMatch
+  --       -- Check sanity of current slot
+  --       let sNext = bh ^. bhSlot
+  --       sLast < sNext ?! SlotDidNotIncrease
+  --       sNext <= sNow ?! SlotInTheFuture
+  --       -- Perform an epoch transition
+  --       eNext <-  trans @EPOCH $ TRC (us ^. bkSlotsPerEpoch, eLast, sNext)
+  --       -- Perform a signature count transition
+  --       sgs' <- trans @SIGCNT $ TRC ((us, dms), sgs, bh ^. bhIssuer)
+  --       return $! ( eNext
+  --                 , sNext
+  --                 , hashHeader bh -- the same as bhToSign bh
+  --                 , sgs'
+  --                 , us
+  --                 )
+  --   ]
 
 instance Embed EPOCH BHEAD where
   wrapFailed = EpochFailure
