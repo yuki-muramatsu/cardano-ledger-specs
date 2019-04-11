@@ -31,6 +31,10 @@ import Cardano.Spec.Chain.STS.Rule.BHead
 import Cardano.Spec.Chain.STS.Rule.BBody
 import Cardano.Spec.Chain.STS.Rule.Pbft
 
+
+data BlockType = Main | EBB deriving (Eq, Show)
+
+
 data CHAIN
 
 instance STS CHAIN where
@@ -52,37 +56,17 @@ instance STS CHAIN where
     = BHeadFailure (PredicateFailure BHEAD)
     | BBodyFailure (PredicateFailure BBODY)
     | PBFTFailure (PredicateFailure PBFT)
-    | EBBCheckFailure Bool
+    | EBBCheckFailure BlockType
     | MaximumBlockSize Natural Natural
     deriving (Eq, Show)
 
   initialRules = []
-    -- [ do
-    --     IRC (_, gks, pps) <- judgmentContext
-    --     let
-    --       s0 = Slot 0
-    --       dsenv
-    --         = DSEnv
-    --         { _dSEnvAllowedDelegators = gks
-    --         , _dSEnvEpoch = sEpoch s0 (pps ^. bkSlotsPerEpoch)
-    --         , _dSEnvSlot = s0
-    --         , _dSEnvStableAfter = pps ^. Ledger.Update.stableAfter
-    --         }
-    --     ds <- trans @DELEG $ IRC dsenv
-    --     return $! ( Epoch 0
-    --               , s0
-    --               , genesisHash
-    --               , []
-    --               , ds
-    --               , pps
-    --               )
-    -- ]
 
   transitionRules = [ isEBBRule, notEBBRule ] where
     isEBBRule :: TransitionRule CHAIN
     isEBBRule = do
       TRC (_sNow, (sLast, elens, sgs, _, utxo, us, ds), b) <- judgmentContext
-      bIsEBB b ?! EBBCheckFailure False -- this is not an EBB
+      bIsEBB b ?! EBBCheckFailure Main -- this is not an EBB
       bSize b <= (2 `shift` 21) ?! MaximumBlockSize (bSize b) (2 `shift` 21)
       let h' = bhHash (b ^. bHeader)
       return $! (sLast, elens, sgs, h', utxo, us, ds)
@@ -90,14 +74,10 @@ instance STS CHAIN where
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
       TRC (sNow, (sLast, elens, sgs, h, utxo, us, ds), b) <- judgmentContext
-      not (bIsEBB b) ?! EBBCheckFailure True -- this is an EBB
-      -- TODO(md): The BHEAD STS has to be rewritten first. Then after
-      -- BHEAD is transitioned, PBFT and BBODY have to be transitioned too.
-      --
+      not (bIsEBB b) ?! EBBCheckFailure EBB -- this is an EBB
+
       (us', elens') <- trans @BHEAD $ TRC (sLast, (us, elens), b ^. bHeader)
       let ppsUs' = snd (us' ^. _2)
-      -- TOOD(md): there is no Map VKeyGenesis VKey available here so
-      -- making it undefined for the time being
       let dm = _dIStateDelegationMap ds :: Map VKeyGenesis VKey
       (h', sgs') <- trans @PBFT $ TRC ((ppsUs', dm, sLast, sNow), (h, sgs), b ^. bHeader)
       -- TODO(md): make a transition with the BBODY STS
