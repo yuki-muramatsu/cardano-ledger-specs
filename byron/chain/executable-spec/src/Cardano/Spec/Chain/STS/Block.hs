@@ -8,6 +8,7 @@ import Control.Lens ((^.), makeLenses, view)
 import Crypto.Hash (hashlazy)
 import Data.AbstractSize
 import Data.ByteString.Lazy.Char8 (pack)
+import Data.Map.Strict (Map)
 import Data.Sequence ((<|))
 import Data.Typeable (typeOf)
 import Numeric.Natural (Natural)
@@ -102,8 +103,14 @@ bIsEBB :: Block -> Bool
 bIsEBB = undefined
 
 -- | Compute the epoch for the given _absolute_ slot
-sEpoch :: Slot -> SlotCount -> Epoch
-sEpoch (Slot s) (SlotCount spe) = Epoch $ s `div` spe
+-- sEpoch :: Slot -> SlotCount -> Epoch
+-- sEpoch (Slot s) (SlotCount spe) = Epoch $ s `div` spe
+--
+-- TODO(md): to be implemented as defined in the LaTeX chain
+-- specification. The type matches that given in the specification.
+sEpoch :: Slot -> Map Epoch SlotCount -> Epoch
+sEpoch = undefined
+
 
 instance HasSizeInfo Block where
   isTrivial = null . view (bBody . bDCerts)
