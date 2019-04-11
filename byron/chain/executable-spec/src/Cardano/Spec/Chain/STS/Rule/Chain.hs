@@ -7,7 +7,7 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import Control.Lens ((^.)) --, _1, _5, Lens')
+import Control.Lens ((^.), _2) --, _1, _5, Lens')
 import qualified Crypto.Hash
 import Data.Bits (shift)
 import Data.ByteString (ByteString)
@@ -81,7 +81,7 @@ instance STS CHAIN where
   transitionRules = [ isEBBRule, notEBBRule ] where
     isEBBRule :: TransitionRule CHAIN
     isEBBRule = do
-      TRC (_, (sLast, elens, sgs, _, utxo, us, ds), b) <- judgmentContext
+      TRC (_sNow, (sLast, elens, sgs, _, utxo, us, ds), b) <- judgmentContext
       bIsEBB b ?! EBBCheckFailure False -- this is not an EBB
       bSize b <= (2 `shift` 21) ?! MaximumBlockSize (bSize b) (2 `shift` 21)
       let h' = bhHash (b ^. bHeader)
@@ -89,13 +89,19 @@ instance STS CHAIN where
 
     notEBBRule :: TransitionRule CHAIN
     notEBBRule = do
-      TRC (_, (sLast, elens, sgs, h, utxo, us, ds), b) <- judgmentContext
+      TRC (sNow, (sLast, elens, sgs, h, utxo, us, ds), b) <- judgmentContext
       not (bIsEBB b) ?! EBBCheckFailure True -- this is an EBB
       -- TODO(md): The BHEAD STS has to be rewritten first. Then after
       -- BHEAD is transitioned, PBFT and BBODY have to be transitioned too.
       --
-      -- (us', elens') <- trans @BHEAD $ TRC (sLast, (us, elens), b ^. bHeader)
-      return $! (sLast, elens, sgs, h, utxo, us, ds)
+      (us', elens') <- trans @BHEAD $ TRC (sLast, (us, elens), b ^. bHeader)
+      let ppsUs' = snd (us' ^. _2)
+      -- TOOD(md): there is no Map VKeyGenesis VKey available here so
+      -- making it undefined for the time being
+      let dm = _dIStateDelegationMap ds :: Map VKeyGenesis VKey
+      (h', sgs') <- trans @PBFT $ TRC ((ppsUs', dm, sLast, sNow), (h, sgs), b ^. bHeader)
+      -- TODO(md): make a transition with the BBODY STS
+      return $! (b ^. bHeader ^. bhSlot, elens', sgs', h', utxo, us, ds)
 
     -- [ do
     --     TRC
