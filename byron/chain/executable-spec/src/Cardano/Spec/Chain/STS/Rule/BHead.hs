@@ -4,7 +4,7 @@
 
 module Cardano.Spec.Chain.STS.Rule.BHead where
 
--- import Control.Lens ((^.))
+import Control.Lens ((^.), _2)
 import Data.Map.Strict (Map)
 -- import Data.Sequence (Seq)
 
@@ -20,6 +20,7 @@ data BHEAD
 
 instance STS BHEAD where
   type Environment BHEAD = Slot
+
   type State BHEAD
     = ( UPIState
       , Map Epoch SlotCount
@@ -43,11 +44,14 @@ instance STS BHEAD where
 
   transitionRules =
     [ do
-        TRC (_sLast, (us, elens), _bh) <- judgmentContext
-        -- ... <- trans @EPOCH $ TRC (pps us, (elens, sEpoch sLast elens, us), bhSlot b)
-        -- let sMax =
-        -- bHeaderSize bh <= sMax ?! ...
-        return $! (us, elens)
+        TRC (sLast, (us, elens), bh) <- judgmentContext
+        -- TODO(md): it's not clear what map of keys to pass to the
+        -- EPOCH STS because no such map is available to the BHEAD STS
+        let epochEnv = undefined :: Map VKeyGenesis VKey
+        (elens', _e_n, us') <- trans @EPOCH $ TRC (epochEnv, (elens, sEpoch sLast elens, us), bh ^. bhSlot)
+        let sMax = (snd (us' ^. _2)) ^. maxHdrSz
+        bHeaderSize bh <= sMax ?! HeaderSizeTooBig
+        return $! (us', elens')
     ]
   -- transitionRules =
   --   [ do
